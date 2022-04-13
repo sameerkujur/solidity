@@ -1,0 +1,105 @@
+
+// SPDX-License-Identifier:GPL -3.0
+
+pragma solidity  >=0.5.0 <0.9.0;
+
+
+
+contract  votingSytem{
+
+mapping (address=>bool) voter;
+bool electionEnded;
+address ElectionCommision;
+uint public totalVotes;
+
+constructor (){
+
+    ElectionCommision=msg.sender;
+}
+
+
+modifier Onlyelectioncommitte(){
+    require(msg.sender==ElectionCommision,"you are not authorized,Only election committee can enlist party");
+    _;
+}
+
+
+struct party{
+    string partyName;
+    string leader;
+    uint noOfvoters;
+}
+struct voterDetails{
+    string VotedTo;
+    uint party_ID;
+
+
+}
+mapping(uint=>party) public parties;
+mapping(address=>voterDetails) public  Votercheck;
+uint num;
+
+
+
+function CreatingParty(string memory name,string memory _leader) public Onlyelectioncommitte{
+      party storage p1=parties[num++];
+      p1.partyName=name;
+      p1.leader=_leader;
+}
+
+
+ function voteToCongress() public{
+     require(electionEnded==false,"Election is over");
+     require(msg.sender!=ElectionCommision,"election commision can't vote");
+    require(voter[msg.sender]==false,"you already voted");
+    parties[0].noOfvoters++;
+    voter[msg.sender]=true;
+    Votercheck[msg.sender].VotedTo="Congress";
+    Votercheck[msg.sender].party_ID=0;
+    totalVotes++;
+
+}
+ function voteToAAP() public{
+     require(electionEnded==false,"Election is over");
+     require(msg.sender!=ElectionCommision,"election commision can't vote");
+    require(voter[msg.sender]==false,"you already voted");
+    parties[1].noOfvoters++;
+    voter[msg.sender]=true;
+     Votercheck[msg.sender].VotedTo="AAP";
+    Votercheck[msg.sender].party_ID=1;
+    totalVotes++;
+
+}
+ function voteToBJP() public{
+     require(electionEnded==false,"Election is over");
+    require(msg.sender!=ElectionCommision,"election commision can't vote");
+    require(voter[msg.sender]==false,"you already voted");
+    parties[2].noOfvoters++;
+    voter[msg.sender]=true;
+     Votercheck[msg.sender].VotedTo="BJP";
+    Votercheck[msg.sender].party_ID=2;
+    totalVotes++;
+}
+
+
+
+function ElectionWons() public Onlyelectioncommitte returns(string memory) {
+
+ electionEnded=true;
+ if(parties[0].noOfvoters> totalVotes/num){
+    
+     return "Congress winner";
+ }
+ if(parties[1].noOfvoters> totalVotes/num){
+     
+     return "AAP winner";
+ }
+ if(parties[2].noOfvoters> totalVotes/num){
+      
+     return "BJP winner";
+ }
+
+return "no winner";
+}
+
+}
