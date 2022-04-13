@@ -1,0 +1,139 @@
+// SPDX-License-Identifier:GPL -3.0
+
+pragma solidity ^0.8.7;
+
+
+contract CrowdFunding{
+// yaha variables hai jo  project mein kaam aayega 
+mapping(address=>uint) public contributors;
+address public Manager;
+uint public target;
+uint public deadLine;
+uint public minimum_contribution;
+uint public noOfContributors;
+uint public raisedAmount;
+
+struct Request{
+  // kis liye mang rahe h paisa
+ string description;
+ //kis ke liye mang rahe h
+ address payable recipient;
+ uint value;
+ bool completed;
+ uint noOfvoters;
+ // kin kin voters ne haan bola h paise dene ke liye
+ mapping(address=>bool) voters;
+
+}
+
+// agar ek se jada multiple request aaya toh
+// har request ko map kr denge
+//aur uske hisab se voters vote karega 
+//eg :-
+// 0-accident request
+// 1- environment safe request
+mapping(uint=>Request) public requests;
+uint public numRequest;
+
+ constructor( uint targetValue, uint _deadLine){
+     //setting the target value
+      target=targetValue;
+
+    //ek clock chal rha hoga uska hisab se block.timestamp mein time aayega
+    //phir usmein hum deadline add kr denge jo  ki second mein hoga
+    
+      deadLine=block.timestamp+_deadLine;
+
+      //minnimun amount that should be transfer
+      minimum_contribution=100 wei;
+
+
+      //making the manager admin of the contract
+      Manager=msg.sender;
+
+ }
+
+
+ function sendEther() public payable{
+        
+         require(block.timestamp<=deadLine,"dead line expires");
+          require(msg.value>=minimum_contribution,"Less then minimum contribution");
+          if(contributors[msg.sender]==0){
+            noOfContributors++;
+          }
+          contributors[msg.sender]+=msg.value;
+          raisedAmount+=msg.value;
+ }
+
+
+
+function getbalance() public view returns(uint){
+
+  return address(this).balance;
+}
+
+// refund
+//agar deadline end ho gya aur target reach nahi ho paya toh
+//refund krna hoga humein money
+function refund () public{
+  require(block.timestamp>deadLine && raisedAmount< target,"you are not eligible for refund");
+  require(contributors[msg.sender]>0);
+  address payable user=payable(msg.sender);
+  user.transfer(contributors[msg.sender]);
+  contributors[msg.sender]=0;
+
+}
+
+
+
+//Function Modifiers are used to modify the behaviour of a function.
+ modifier onlyManager(){
+    require(msg.sender==Manager,"Only Manager can call this function");
+    _;
+              
+ }
+
+
+function createRequest(string memory  _description,address payable _recipient,uint _value) public onlyManager{
+      // agar structure banaye aur usme mapping banaye
+      //aur usko function mein use kiye toh 
+      //storage keyword ka use krna hoga warna error milega
+
+      Request storage newRequest = requests[numRequest++];
+      newRequest.description=_description;
+      newRequest.recipient=_recipient;
+      newRequest.value=_value;
+      newRequest.completed=false;
+      newRequest.noOfvoters=0;
+      
+
+
+}
+
+
+function voteRequest(uint requestNo) public{
+//checks that contributor is actually contributor
+      require(contributors[msg.sender]>0,"you must be contributor");
+      require(requests[requestNo].voters[msg.sender]==false,"you already voted");
+      // Request storage thisRequest=requests[requestNo];
+      // require(thisRequest.voters[msg.sender]==false,"you  already voted");
+      requests[requestNo].voters[msg.sender]=true;
+      requests[requestNo].noOfvoters++;
+
+
+}
+
+//for making payments
+
+function makePayment(uint requestNo) public onlyManager{
+
+    require(raisedAmount >=target);
+   // Request storage thisRequest=requests[requestNo];
+   require(requests[requestNo].completed==false,"Payment already done");
+   require(requests[requestNo].noOfvoters> noOfContributors/2,"Majority of voters not agree");
+   requests[requestNo].recipient.transfer(requests[requestNo].value);
+    requests[requestNo].completed=true;
+
+}
+
+}
